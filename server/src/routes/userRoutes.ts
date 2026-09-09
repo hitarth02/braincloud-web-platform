@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { makeUserController } from "../controllers/userController";
-import { authenticate, authorize } from "../middleware/auth";
+import { authenticate, authorize, requirePasswordFresh } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import {
   createUserSchema,
@@ -11,7 +11,7 @@ import {
 const router = Router();
 const controller = makeUserController("USER");
 
-router.use(authenticate, authorize("ADMIN", "STAFF"));
+router.use(authenticate, requirePasswordFresh, authorize("ADMIN", "STAFF"));
 
 router.get("/", controller.getAll);
 router.post("/", validate(createUserSchema), controller.create);

@@ -38,6 +38,7 @@ export const changeOwnPassword = asyncHandler(
     if (!isMatch) throw new ApiError(400, "Current password is incorrect");
 
     user.password = newPassword;
+    user.mustChangePassword = false;
     await user.save();
 
     sendSuccess(res, "Password changed successfully");

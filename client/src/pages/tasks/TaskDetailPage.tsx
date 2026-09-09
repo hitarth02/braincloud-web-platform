@@ -83,8 +83,9 @@ export const TaskDetailPage = ({ basePath, canManage }: TaskDetailPageProps) => 
           <div>
             <h1 className="text-xl font-bold text-gray-900">{task.title}</h1>
             <p className="text-sm text-gray-500 mt-1">
-              Created by {task.createdBy.firstName} {task.createdBy.lastName} on{" "}
-              {formatDate(task.createdAt)}
+              Created by{" "}
+              {task.createdBy ? `${task.createdBy.firstName} ${task.createdBy.lastName}` : "an unknown user"}{" "}
+              on {formatDate(task.createdAt)}
             </p>
           </div>
           <div className="flex gap-2">
@@ -102,7 +103,9 @@ export const TaskDetailPage = ({ basePath, canManage }: TaskDetailPageProps) => 
           <div>
             <p className="text-gray-400">Assigned To</p>
             <p className="text-gray-800 font-medium mt-0.5">
-              {task.assignedTo.firstName} {task.assignedTo.lastName}
+              {task.assignedTo
+                ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}`
+                : <span className="italic text-gray-400">Unknown user</span>}
             </p>
           </div>
           <div>

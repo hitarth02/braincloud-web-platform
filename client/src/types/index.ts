@@ -10,6 +10,7 @@ export interface User {
   phone?: string;
   avatar?: string;
   isActive: boolean;
+  mustChangePassword: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,8 +22,10 @@ export interface Task {
   _id: string;
   title: string;
   description: string;
-  assignedTo: User;
-  createdBy: User;
+  // Nullable: a task can outlive the user it references (e.g. orphaned by a
+  // database reseed), in which case populate() resolves the field to null.
+  assignedTo: User | null;
+  createdBy: User | null;
   priority: TaskPriority;
   status: TaskStatus;
   dueDate: string;

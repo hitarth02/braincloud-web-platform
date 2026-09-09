@@ -42,7 +42,7 @@ export const LoginPage = () => {
       const { token, user } = await authService.login(email, password);
       dispatch(setCredentials({ token, user }));
       toast.success(`Welcome back, ${user.firstName}!`);
-      navigate(`/${user.role.toLowerCase()}/dashboard`);
+      navigate(user.mustChangePassword ? "/reset-password" : `/${user.role.toLowerCase()}/dashboard`);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || "Login failed");
     } finally {

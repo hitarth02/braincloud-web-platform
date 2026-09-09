@@ -6,6 +6,7 @@ import { Card } from "../../components/Card";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { dashboardService } from "../../services/dashboardService";
 import { AdminDashboardStats } from "../../types";
+import { MAX_USERS, MAX_STAFF } from "../../utils/constants";
 
 const COLORS = ["#9ca3af", "#f59e0b", "#22c55e"];
 
@@ -39,8 +40,18 @@ export const AdminDashboardPage = () => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Total Users" value={stats.totalUsers} icon={Users} color="blue" />
-        <StatCard label="Total Staff" value={stats.totalStaff} icon={ShieldCheck} color="purple" />
+        <StatCard
+          label="Total Users"
+          value={`${stats.totalUsers} / ${MAX_USERS}`}
+          icon={Users}
+          color="blue"
+        />
+        <StatCard
+          label="Total Staff"
+          value={`${stats.totalStaff} / ${MAX_STAFF}`}
+          icon={ShieldCheck}
+          color="purple"
+        />
         <StatCard label="Active Users" value={stats.activeUsers} icon={UserCheck} color="green" />
         <StatCard label="Inactive Users" value={stats.inactiveUsers} icon={UserX} color="red" />
       </div>

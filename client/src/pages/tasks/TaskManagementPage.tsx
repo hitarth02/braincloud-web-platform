@@ -133,7 +133,9 @@ export const TaskManagementPage = ({
                   >
                     <td className="px-6 py-3 font-medium text-gray-900">{task.title}</td>
                     <td className="px-6 py-3 text-gray-600">
-                      {task.assignedTo.firstName} {task.assignedTo.lastName}
+                      {task.assignedTo
+                        ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}`
+                        : <span className="italic text-gray-400">Unknown user</span>}
                     </td>
                     <td className="px-6 py-3">
                       <Badge label={task.priority} color={priorityBadgeColor(task.priority)} />

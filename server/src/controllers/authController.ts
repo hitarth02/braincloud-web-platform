@@ -36,6 +36,7 @@ export const login = asyncHandler(async (req, res: Response) => {
       phone: user.phone,
       avatar: user.avatar,
       isActive: user.isActive,
+      mustChangePassword: user.mustChangePassword,
     },
   });
 });
@@ -61,6 +62,7 @@ export const changePassword = asyncHandler(
     if (!isMatch) throw new ApiError(400, "Current password is incorrect");
 
     user.password = newPassword;
+    user.mustChangePassword = false;
     await user.save();
 
     sendSuccess(res, "Password changed successfully");

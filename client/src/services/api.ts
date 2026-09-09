@@ -22,6 +22,12 @@ api.interceptors.response.use(
         window.location.href = "/login";
       }
     }
+    if (
+      error.response?.data?.code === "PASSWORD_RESET_REQUIRED" &&
+      window.location.pathname !== "/reset-password"
+    ) {
+      window.location.href = "/reset-password";
+    }
     return Promise.reject(error);
   }
 );

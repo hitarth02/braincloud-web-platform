@@ -61,7 +61,7 @@ export const getTaskById = asyncHandler(async (req: AuthRequest, res: Response) 
 
   if (
     req.user!.role === "USER" &&
-    task.assignedTo._id.toString() !== req.user!.userId
+    (!task.assignedTo || (task.assignedTo as any)._id.toString() !== req.user!.userId)
   ) {
     throw new ApiError(403, "You may only view tasks assigned to you");
   }

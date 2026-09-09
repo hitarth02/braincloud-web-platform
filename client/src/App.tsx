@@ -6,6 +6,7 @@ import { RoleRoute } from "./routes/RoleRoute";
 import { MainLayout } from "./layouts/MainLayout";
 
 import { LoginPage } from "./pages/auth/LoginPage";
+import { ForcePasswordResetPage } from "./pages/auth/ForcePasswordResetPage";
 import { AdminDashboardPage } from "./pages/dashboard/AdminDashboardPage";
 import { StaffDashboardPage } from "./pages/dashboard/StaffDashboardPage";
 import { UserDashboardPage } from "./pages/dashboard/UserDashboardPage";
@@ -33,6 +34,7 @@ function App() {
 
         <Route element={<ProtectedRoute />}>
           <Route path="/" element={<RootRedirect />} />
+          <Route path="/reset-password" element={<ForcePasswordResetPage />} />
 
           <Route element={<MainLayout />}>
             {/* ADMIN */}

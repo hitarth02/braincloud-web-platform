@@ -7,7 +7,7 @@ import {
   deleteTask,
   updateTaskStatus,
 } from "../controllers/taskController";
-import { authenticate, authorize } from "../middleware/auth";
+import { authenticate, authorize, requirePasswordFresh } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import {
   createTaskSchema,
@@ -17,7 +17,7 @@ import {
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authenticate, requirePasswordFresh);
 
 router.get("/", getTasks);
 router.get("/:id", getTaskById);

@@ -4,6 +4,7 @@ import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/apiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth";
+import { MAX_USERS, MAX_STAFF } from "../config/limits";
 
 /**
  * Users and Staff are both stored in the same User collection, differentiated
@@ -60,6 +61,16 @@ export const makeUserController = (targetRole: UserRole) => {
     const existing = await User.findOne({ email });
     if (existing) throw new ApiError(409, "Email already in use");
 
+    const limit = targetRole === "STAFF" ? MAX_STAFF : MAX_USERS;
+    const currentCount = await User.countDocuments({ role: targetRole });
+    if (currentCount >= limit) {
+      const label = targetRole === "STAFF" ? "staff" : "users";
+      throw new ApiError(
+        400,
+        `Cannot create more ${label}: the maximum of ${limit} has been reached`
+      );
+    }
+
     const user = await User.create({
       firstName,
       lastName,
@@ -67,6 +78,7 @@ export const makeUserController = (targetRole: UserRole) => {
       password,
       phone,
       role: targetRole,
+      mustChangePassword: true,
     });
 
     sendSuccess(res, "Created successfully", user, 201);
@@ -103,6 +115,7 @@ export const makeUserController = (targetRole: UserRole) => {
     if (!user) throw new ApiError(404, "Not found");
 
     user.password = req.body.newPassword;
+    user.mustChangePassword = true;
     await user.save();
 
     sendSuccess(res, "Password reset successfully");

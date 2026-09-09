@@ -57,7 +57,9 @@ export const StaffDashboardPage = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-900">{task.title}</p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    Assigned to {task.assignedTo.firstName} {task.assignedTo.lastName} &middot; Due {formatDate(task.dueDate)}
+                    Assigned to{" "}
+                    {task.assignedTo ? `${task.assignedTo.firstName} ${task.assignedTo.lastName}` : "unknown user"}
+                    {" "}&middot; Due {formatDate(task.dueDate)}
                   </p>
                 </div>
                 <div className="flex gap-2">

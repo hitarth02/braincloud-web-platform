@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { makeUserController } from "../controllers/userController";
-import { authenticate, authorize } from "../middleware/auth";
+import { authenticate, authorize, requirePasswordFresh } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import {
   createUserSchema,
@@ -12,7 +12,7 @@ const router = Router();
 const controller = makeUserController("STAFF");
 
 // Only ADMIN may manage staff accounts.
-router.use(authenticate, authorize("ADMIN"));
+router.use(authenticate, requirePasswordFresh, authorize("ADMIN"));
 
 router.get("/", controller.getAll);
 router.post("/", validate(createUserSchema), controller.create);

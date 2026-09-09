@@ -12,6 +12,7 @@ export interface IUser extends Document {
   phone?: string;
   avatar?: string;
   isActive: boolean;
+  mustChangePassword: boolean;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidate: string): Promise<boolean>;
@@ -37,6 +38,7 @@ const userSchema = new Schema<IUser>(
     phone: { type: String, default: "" },
     avatar: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
+    mustChangePassword: { type: Boolean, default: false },
   },
   {
     timestamps: true,

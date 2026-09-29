@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Users, ShieldCheck, UserCheck, UserX, ClipboardList, Clock, Loader, CheckCircle2 } from "lucide-react";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { StatCard } from "../../components/StatCard";
-import { Card } from "../../components/Card";
+import { StatusPieChart } from "../../components/charts/StatusPieChart";
+import { PriorityBarChart } from "../../components/charts/PriorityBarChart";
+import { TASK_STATUS_COLORS, USER_STATUS_COLORS } from "../../components/charts/chartColors";
+import { RecentActivityFeed } from "../../components/RecentActivityFeed";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { dashboardService } from "../../services/dashboardService";
 import { AdminDashboardStats } from "../../types";
 import { MAX_USERS, MAX_STAFF } from "../../utils/constants";
-
-const COLORS = ["#9ca3af", "#f59e0b", "#22c55e"];
 
 export const AdminDashboardPage = () => {
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
@@ -24,10 +24,15 @@ export const AdminDashboardPage = () => {
   if (loading) return <LoadingSpinner label="Loading dashboard..." />;
   if (!stats) return null;
 
-  const chartData = [
+  const taskChartData = [
     { name: "Pending", value: stats.pendingTasks },
     { name: "In Progress", value: stats.inProgressTasks },
     { name: "Completed", value: stats.completedTasks },
+  ];
+
+  const userChartData = [
+    { name: "Active", value: stats.activeUsers },
+    { name: "Inactive", value: stats.inactiveUsers },
   ];
 
   return (
@@ -63,32 +68,29 @@ export const AdminDashboardPage = () => {
         <StatCard label="Completed" value={stats.completedTasks} icon={CheckCircle2} color="green" />
       </div>
 
-      <Card className="p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">Task Status Breakdown</h2>
-        {stats.totalTasks === 0 ? (
-          <p className="text-sm text-gray-400">No tasks have been created yet.</p>
-        ) : (
-          <ResponsiveContainer width="100%" height={260}>
-            <PieChart>
-              <Pie
-                data={chartData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                outerRadius={90}
-                label
-              >
-                {chartData.map((_, index) => (
-                  <Cell key={index} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        )}
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <StatusPieChart
+          title="Task Status Breakdown"
+          data={taskChartData}
+          colors={TASK_STATUS_COLORS}
+          emptyMessage="No tasks have been created yet."
+        />
+        <StatusPieChart
+          title="User Status Breakdown"
+          data={userChartData}
+          colors={USER_STATUS_COLORS}
+          emptyMessage="No users have been created yet."
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <PriorityBarChart
+          title="Task Priority Breakdown"
+          data={stats.priorityBreakdown}
+          emptyMessage="No tasks have been created yet."
+        />
+        <RecentActivityFeed items={stats.recentActivity} />
+      </div>
     </div>
   );
 };

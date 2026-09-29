@@ -3,6 +3,10 @@ import { Link } from "react-router-dom";
 import { Users, ClipboardList, Clock, Loader, CheckCircle2 } from "lucide-react";
 import { StatCard } from "../../components/StatCard";
 import { Card } from "../../components/Card";
+import { StatusPieChart } from "../../components/charts/StatusPieChart";
+import { PriorityBarChart } from "../../components/charts/PriorityBarChart";
+import { TASK_STATUS_COLORS } from "../../components/charts/chartColors";
+import { UpcomingDeadlines } from "../../components/UpcomingDeadlines";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { EmptyState } from "../../components/EmptyState";
 import { Badge, priorityBadgeColor, statusBadgeColor } from "../../components/Badge";
@@ -24,6 +28,12 @@ export const StaffDashboardPage = () => {
   if (loading) return <LoadingSpinner label="Loading dashboard..." />;
   if (!stats) return null;
 
+  const taskChartData = [
+    { name: "Pending", value: stats.pendingTasks },
+    { name: "In Progress", value: stats.inProgressTasks },
+    { name: "Completed", value: stats.completedTasks },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -40,6 +50,22 @@ export const StaffDashboardPage = () => {
         <StatCard label="In Progress" value={stats.inProgressTasks} icon={Loader} color="yellow" />
         <StatCard label="Completed" value={stats.completedTasks} icon={CheckCircle2} color="green" />
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <StatusPieChart
+          title="Task Status Breakdown"
+          data={taskChartData}
+          colors={TASK_STATUS_COLORS}
+          emptyMessage="You haven't created any tasks yet."
+        />
+        <PriorityBarChart
+          title="Task Priority Breakdown"
+          data={stats.priorityBreakdown}
+          emptyMessage="You haven't created any tasks yet."
+        />
+      </div>
+
+      <UpcomingDeadlines tasks={stats.upcomingDeadlines} showAssignee />
 
       <Card>
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">

@@ -40,7 +40,7 @@ export const createUserService = (basePath: "/users" | "/staff") => ({
     const res = await api.put<ApiResponse<User>>(`${basePath}/${id}`, data);
     return res.data.data;
   },
-  deactivate: async (id: string) => {
+  remove: async (id: string) => {
     const res = await api.delete<ApiResponse<User>>(`${basePath}/${id}`);
     return res.data.data;
   },

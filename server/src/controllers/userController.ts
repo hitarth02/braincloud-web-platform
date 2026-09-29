@@ -1,5 +1,7 @@
 import { Response } from "express";
 import { User, UserRole } from "../models/User";
+import { Task } from "../models/Task";
+import { Announcement } from "../models/Announcement";
 import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/apiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -102,10 +104,14 @@ export const makeUserController = (targetRole: UserRole) => {
     const user = await User.findOne({ _id: req.params.id, role: targetRole });
     if (!user) throw new ApiError(404, "Not found");
 
-    user.isActive = false;
-    await user.save();
+    // Cascade: a user's tasks/announcements have no meaning once the user is gone.
+    await Promise.all([
+      Task.deleteMany({ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }),
+      Announcement.deleteMany({ createdBy: user._id }),
+    ]);
+    await user.deleteOne();
 
-    sendSuccess(res, "Deactivated successfully", user);
+    sendSuccess(res, "Deleted successfully", user);
   });
 
   const resetPassword = asyncHandler(async (req: AuthRequest, res: Response) => {

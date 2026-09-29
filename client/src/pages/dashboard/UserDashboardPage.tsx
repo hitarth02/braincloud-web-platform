@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { ClipboardList, Clock, Loader, CheckCircle2, AlertTriangle } from "lucide-react";
 import { StatCard } from "../../components/StatCard";
+import { StatusPieChart } from "../../components/charts/StatusPieChart";
+import { PriorityBarChart } from "../../components/charts/PriorityBarChart";
+import { TASK_STATUS_COLORS } from "../../components/charts/chartColors";
+import { UpcomingDeadlines } from "../../components/UpcomingDeadlines";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { dashboardService } from "../../services/dashboardService";
 import { UserDashboardStats } from "../../types";
@@ -19,6 +23,12 @@ export const UserDashboardPage = () => {
   if (loading) return <LoadingSpinner label="Loading dashboard..." />;
   if (!stats) return null;
 
+  const taskChartData = [
+    { name: "Pending", value: stats.pendingTasks },
+    { name: "In Progress", value: stats.inProgressTasks },
+    { name: "Completed", value: stats.completedTasks },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -35,6 +45,22 @@ export const UserDashboardPage = () => {
         <StatCard label="Completed" value={stats.completedTasks} icon={CheckCircle2} color="green" />
         <StatCard label="Overdue" value={stats.overdueTasks} icon={AlertTriangle} color="red" />
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <StatusPieChart
+          title="My Task Status Breakdown"
+          data={taskChartData}
+          colors={TASK_STATUS_COLORS}
+          emptyMessage="No tasks have been assigned to you yet."
+        />
+        <PriorityBarChart
+          title="My Task Priority Breakdown"
+          data={stats.priorityBreakdown}
+          emptyMessage="No tasks have been assigned to you yet."
+        />
+      </div>
+
+      <UpcomingDeadlines tasks={stats.upcomingDeadlines} />
     </div>
   );
 };

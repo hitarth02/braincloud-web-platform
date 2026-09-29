@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, KeyRound, Pencil, UserX } from "lucide-react";
+import { Plus, Search, KeyRound, Pencil, Trash2 } from "lucide-react";
 import toast from "react-hot-toast";
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
@@ -38,8 +38,8 @@ export const UserManagementPage = ({
   const [status, setStatus] = useState<"active" | "inactive" | "">("");
   const [page, setPage] = useState(1);
 
-  const [deactivateTarget, setDeactivateTarget] = useState<User | null>(null);
-  const [deactivating, setDeactivating] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [resetTarget, setResetTarget] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
@@ -68,18 +68,18 @@ export const UserManagementPage = ({
     load();
   };
 
-  const handleDeactivate = async () => {
-    if (!deactivateTarget) return;
-    setDeactivating(true);
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await service.deactivate(deactivateTarget.id || deactivateTarget._id!);
-      toast.success(`${entityLabel} deactivated`);
-      setDeactivateTarget(null);
+      await service.remove(deleteTarget.id || deleteTarget._id!);
+      toast.success(`${entityLabel} deleted`);
+      setDeleteTarget(null);
       load();
     } catch (err: any) {
-      toast.error(err?.response?.data?.message || "Failed to deactivate");
+      toast.error(err?.response?.data?.message || "Failed to delete");
     } finally {
-      setDeactivating(false);
+      setDeleting(false);
     }
   };
 
@@ -211,15 +211,13 @@ export const UserManagementPage = ({
                         >
                           <KeyRound className="w-4 h-4" />
                         </button>
-                        {user.isActive && (
-                          <button
-                            onClick={() => setDeactivateTarget(user)}
-                            className="p-1.5 rounded-md text-red-500 hover:bg-red-50"
-                            title="Deactivate"
-                          >
-                            <UserX className="w-4 h-4" />
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setDeleteTarget(user)}
+                          className="p-1.5 rounded-md text-red-500 hover:bg-red-50"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -233,13 +231,13 @@ export const UserManagementPage = ({
       </Card>
 
       <ConfirmDialog
-        isOpen={!!deactivateTarget}
-        title={`Deactivate ${entityLabel}`}
-        message={`Are you sure you want to deactivate ${deactivateTarget?.firstName} ${deactivateTarget?.lastName}? They will no longer be able to log in.`}
-        confirmLabel="Deactivate"
-        loading={deactivating}
-        onConfirm={handleDeactivate}
-        onCancel={() => setDeactivateTarget(null)}
+        isOpen={!!deleteTarget}
+        title={`Delete ${entityLabel}`}
+        message={`Are you sure you want to permanently delete ${deleteTarget?.firstName} ${deleteTarget?.lastName}? This cannot be undone — their tasks and announcements will be deleted as well.`}
+        confirmLabel="Delete"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
 
       <Modal

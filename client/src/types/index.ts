@@ -51,6 +51,33 @@ export interface ApiResponse<T> {
   data: T;
 }
 
+export interface PriorityBreakdown {
+  low: number;
+  medium: number;
+  high: number;
+  urgent: number;
+}
+
+export type ActivityType =
+  | "user_created"
+  | "task_created"
+  | "task_completed"
+  | "announcement_created";
+
+export interface ActivityItem {
+  type: ActivityType;
+  message: string;
+  timestamp: string;
+}
+
+export interface UpcomingTask {
+  _id: string;
+  title: string;
+  dueDate: string;
+  priority: TaskPriority;
+  assignedTo?: { firstName: string; lastName: string } | null;
+}
+
 export interface AdminDashboardStats {
   totalUsers: number;
   totalStaff: number;
@@ -60,6 +87,8 @@ export interface AdminDashboardStats {
   pendingTasks: number;
   inProgressTasks: number;
   completedTasks: number;
+  priorityBreakdown: PriorityBreakdown;
+  recentActivity: ActivityItem[];
 }
 
 export interface StaffDashboardStats {
@@ -69,6 +98,8 @@ export interface StaffDashboardStats {
   inProgressTasks: number;
   completedTasks: number;
   recentTasks: Task[];
+  priorityBreakdown: PriorityBreakdown;
+  upcomingDeadlines: UpcomingTask[];
 }
 
 export interface UserDashboardStats {
@@ -77,4 +108,6 @@ export interface UserDashboardStats {
   inProgressTasks: number;
   completedTasks: number;
   overdueTasks: number;
+  priorityBreakdown: PriorityBreakdown;
+  upcomingDeadlines: UpcomingTask[];
 }

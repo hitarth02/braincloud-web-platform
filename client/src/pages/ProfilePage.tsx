@@ -1,14 +1,19 @@
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { z } from "zod";
 import toast from "react-hot-toast";
 import { Card } from "../components/Card";
 import { Button } from "../components/Button";
 import { FormInput } from "../components/FormInput";
+import { EmptyState } from "../components/EmptyState";
+import { LoadingSpinner } from "../components/LoadingSpinner";
 import { Badge, roleBadgeColor } from "../components/Badge";
+import { ProgressNoteCard } from "../components/ProgressNoteCard";
 import { useAuth } from "../hooks/useAuth";
 import { useAppDispatch } from "../hooks/redux";
 import { updateUser } from "../store/authSlice";
 import { profileService } from "../services/profileService";
+import { progressService } from "../services/progressService";
+import { TaskProgressNote } from "../types";
 import { initials } from "../utils/format";
 
 const profileSchema = z.object({
@@ -47,6 +52,20 @@ export const ProfilePage = () => {
   });
   const [pwErrors, setPwErrors] = useState<Record<string, string>>({});
   const [savingPassword, setSavingPassword] = useState(false);
+
+  const [progressNotes, setProgressNotes] = useState<TaskProgressNote[]>([]);
+  const [progressLoading, setProgressLoading] = useState(true);
+
+  useEffect(() => {
+    if (user?.role !== "USER") {
+      setProgressLoading(false);
+      return;
+    }
+    progressService
+      .getMyFeed({ limit: 10 })
+      .then((res) => setProgressNotes(res.items))
+      .finally(() => setProgressLoading(false));
+  }, [user?.role]);
 
   if (!user) return null;
 
@@ -174,6 +193,32 @@ export const ProfilePage = () => {
           </div>
         </form>
       </Card>
+
+      {user.role === "USER" && (
+        <Card className="p-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">
+            My Progress Updates
+          </h2>
+          {progressLoading ? (
+            <LoadingSpinner label="Loading progress updates..." />
+          ) : progressNotes.length === 0 ? (
+            <EmptyState
+              title="No progress updates yet"
+              description="Post an update from any of your tasks and it will show up here."
+            />
+          ) : (
+            <ul className="divide-y divide-gray-100 -mx-4">
+              {progressNotes.map((n) => (
+                <ProgressNoteCard
+                  key={n._id}
+                  note={n}
+                  taskHref={(id) => `/user/tasks/${id}`}
+                />
+              ))}
+            </ul>
+          )}
+        </Card>
+      )}
     </div>
   );
 };

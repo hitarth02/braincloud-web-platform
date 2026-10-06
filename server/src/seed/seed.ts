@@ -3,6 +3,8 @@ import { env } from "../config/env";
 import { User } from "../models/User";
 import { Task } from "../models/Task";
 import { Announcement } from "../models/Announcement";
+import { TaskProgress } from "../models/TaskProgress";
+import { ActivityLog } from "../models/ActivityLog";
 
 const DEV_PASSWORD = "Admin@123";
 
@@ -20,14 +22,17 @@ const seed = async () => {
   await mongoose.connect(env.MONGODB_URI);
   console.log("Connected to MongoDB for seeding...");
 
-  // Tasks and Announcements reference User documents by ID — clear them
-  // alongside Users so a re-seed never leaves orphaned references behind.
+  // Tasks, Announcements, TaskProgress, and ActivityLog all reference User
+  // (and Task) documents by ID — clear them alongside Users so a re-seed
+  // never leaves orphaned references behind.
   await Promise.all([
     User.deleteMany({}),
     Task.deleteMany({}),
     Announcement.deleteMany({}),
+    TaskProgress.deleteMany({}),
+    ActivityLog.deleteMany({}),
   ]);
-  console.log("Cleared existing users, tasks, and announcements.");
+  console.log("Cleared existing users, tasks, announcements, progress notes, and activity logs.");
 
   await User.create({
     firstName: "Admin",

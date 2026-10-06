@@ -4,6 +4,7 @@ import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/apiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth";
+import { logActivity } from "../utils/activityLogger";
 
 export const getAnnouncements = asyncHandler(
   async (req: AuthRequest, res: Response) => {
@@ -40,6 +41,12 @@ export const createAnnouncement = asyncHandler(
     });
     await announcement.populate("createdBy", "firstName lastName email role");
 
+    logActivity(
+      req.user!,
+      "ANNOUNCEMENT_CREATED",
+      `Posted announcement "${announcement.title}"`
+    );
+
     sendSuccess(res, "Announcement posted successfully", announcement, 201);
   }
 );
@@ -65,6 +72,12 @@ export const updateAnnouncement = asyncHandler(
     await announcement.save();
     await announcement.populate("createdBy", "firstName lastName email role");
 
+    logActivity(
+      req.user!,
+      "ANNOUNCEMENT_UPDATED",
+      `Updated announcement "${announcement.title}"`
+    );
+
     sendSuccess(res, "Announcement updated successfully", announcement);
   }
 );
@@ -77,6 +90,13 @@ export const deleteAnnouncement = asyncHandler(
     assertCanModify(announcement, req);
 
     await announcement.deleteOne();
+
+    logActivity(
+      req.user!,
+      "ANNOUNCEMENT_DELETED",
+      `Deleted announcement "${announcement.title}"`
+    );
+
     sendSuccess(res, "Announcement deleted successfully");
   }
 );

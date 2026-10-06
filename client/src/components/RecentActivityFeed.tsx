@@ -1,15 +1,8 @@
-import { UserPlus, ClipboardList, CheckCircle2, Megaphone, LucideIcon } from "lucide-react";
 import { Card } from "./Card";
 import { EmptyState } from "./EmptyState";
-import { ActivityItem, ActivityType } from "../types";
+import { ActivityItem } from "../types";
+import { ACTIVITY_ICONS } from "../utils/activityIcons";
 import { timeAgo } from "../utils/format";
-
-const ICONS: Record<ActivityType, { icon: LucideIcon; color: string }> = {
-  user_created: { icon: UserPlus, color: "bg-blue-50 text-blue-600" },
-  task_created: { icon: ClipboardList, color: "bg-gray-50 text-gray-600" },
-  task_completed: { icon: CheckCircle2, color: "bg-green-50 text-green-600" },
-  announcement_created: { icon: Megaphone, color: "bg-purple-50 text-purple-600" },
-};
 
 interface RecentActivityFeedProps {
   items: ActivityItem[];
@@ -25,7 +18,7 @@ export const RecentActivityFeed = ({ items }: RecentActivityFeedProps) => (
     ) : (
       <ul className="divide-y divide-gray-100">
         {items.map((item, index) => {
-          const { icon: Icon, color } = ICONS[item.type];
+          const { icon: Icon, color } = ACTIVITY_ICONS[item.type];
           return (
             <li key={index} className="px-6 py-3 flex items-center gap-3">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${color}`}>

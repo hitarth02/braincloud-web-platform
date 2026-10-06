@@ -5,6 +5,7 @@ import { sendSuccess } from "../utils/apiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
 import { signToken } from "../utils/jwt";
 import { AuthRequest } from "../middleware/auth";
+import { logActivity } from "../utils/activityLogger";
 
 export const login = asyncHandler(async (req, res: Response) => {
   const { email, password } = req.body;
@@ -25,6 +26,8 @@ export const login = asyncHandler(async (req, res: Response) => {
 
   const token = signToken({ userId: user.id, role: user.role });
 
+  logActivity({ userId: user.id, role: user.role }, "LOGIN", "Logged in");
+
   sendSuccess(res, "Login successful", {
     token,
     user: {
@@ -41,7 +44,8 @@ export const login = asyncHandler(async (req, res: Response) => {
   });
 });
 
-export const logout = asyncHandler(async (_req, res: Response) => {
+export const logout = asyncHandler(async (req: AuthRequest, res: Response) => {
+  logActivity(req.user!, "LOGOUT", "Logged out");
   sendSuccess(res, "Logout successful");
 });
 
@@ -64,6 +68,8 @@ export const changePassword = asyncHandler(
     user.password = newPassword;
     user.mustChangePassword = false;
     await user.save();
+
+    logActivity(req.user!, "PASSWORD_CHANGED", "Changed their own password");
 
     sendSuccess(res, "Password changed successfully");
   }

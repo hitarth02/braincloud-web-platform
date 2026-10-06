@@ -17,6 +17,9 @@ import { TaskFormPage } from "./pages/tasks/TaskFormPage";
 import { TaskDetailPage } from "./pages/tasks/TaskDetailPage";
 import { ProfilePage } from "./pages/ProfilePage";
 import { AnnouncementsPage } from "./pages/announcements/AnnouncementsPage";
+import { ActivityLogPage } from "./pages/ActivityLogPage";
+import { ReportExportPage } from "./pages/ReportExportPage";
+import { TeamProgressPage } from "./pages/TeamProgressPage";
 import { userService, staffService } from "./services/userService";
 
 const RootRedirect = () => {
@@ -108,6 +111,12 @@ function App() {
                 element={<TaskDetailPage basePath="/admin/tasks" canManage={true} />}
               />
               <Route path="/admin/announcements" element={<AnnouncementsPage />} />
+              <Route
+                path="/admin/progress"
+                element={<TeamProgressPage taskBasePath="/admin/tasks" />}
+              />
+              <Route path="/admin/activity-log" element={<ActivityLogPage />} />
+              <Route path="/admin/reports" element={<ReportExportPage />} />
               <Route path="/admin/profile" element={<ProfilePage />} />
             </Route>
 
@@ -145,7 +154,7 @@ function App() {
                     basePath="/staff/tasks"
                     canCreate={true}
                     title="Tasks"
-                    description="Create, assign, and track tasks."
+                    description="Tasks you've created and assigned."
                   />
                 }
               />
@@ -155,6 +164,11 @@ function App() {
                 element={<TaskDetailPage basePath="/staff/tasks" canManage={true} />}
               />
               <Route path="/staff/announcements" element={<AnnouncementsPage />} />
+              <Route
+                path="/staff/progress"
+                element={<TeamProgressPage taskBasePath="/staff/tasks" />}
+              />
+              <Route path="/staff/reports" element={<ReportExportPage />} />
               <Route path="/staff/profile" element={<ProfilePage />} />
             </Route>
 
@@ -177,6 +191,7 @@ function App() {
                 element={<TaskDetailPage basePath="/user/tasks" canManage={false} />}
               />
               <Route path="/user/announcements" element={<AnnouncementsPage />} />
+              <Route path="/user/reports" element={<ReportExportPage />} />
               <Route path="/user/profile" element={<ProfilePage />} />
             </Route>
           </Route>

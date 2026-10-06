@@ -10,11 +10,15 @@ import { UpcomingDeadlines } from "../../components/UpcomingDeadlines";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
 import { EmptyState } from "../../components/EmptyState";
 import { Badge, priorityBadgeColor, statusBadgeColor } from "../../components/Badge";
+import { ProgressNoteCard } from "../../components/ProgressNoteCard";
+import { RecentActivityFeed } from "../../components/RecentActivityFeed";
+import { useAuth } from "../../hooks/useAuth";
 import { dashboardService } from "../../services/dashboardService";
 import { StaffDashboardStats } from "../../types";
 import { formatDate } from "../../utils/format";
 
 export const StaffDashboardPage = () => {
+  const { user } = useAuth();
   const [stats, setStats] = useState<StaffDashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -97,6 +101,39 @@ export const StaffDashboardPage = () => {
           </ul>
         )}
       </Card>
+
+      <Card>
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="text-base font-semibold text-gray-900">Team Progress Updates</h2>
+          <Link to="/staff/progress" className="text-sm text-primary-600 hover:underline">
+            View all
+          </Link>
+        </div>
+        {stats.recentProgress.length === 0 ? (
+          <EmptyState
+            title="No progress updates yet"
+            description="Daily updates posted by your users will show up here."
+          />
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {stats.recentProgress.map((n) => (
+              <ProgressNoteCard
+                key={n._id}
+                note={n}
+                // Staff only has access to tasks they personally created —
+                // only link when this note's task is one of those.
+                taskHref={
+                  n.task?.createdBy === user?.id
+                    ? (id) => `/staff/tasks/${id}`
+                    : undefined
+                }
+              />
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <RecentActivityFeed items={stats.recentActivity} />
     </div>
   );
 };

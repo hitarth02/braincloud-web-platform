@@ -11,6 +11,7 @@ export interface ITask extends Document {
   priority: TaskPriority;
   status: TaskStatus;
   dueDate: Date;
+  completedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,6 +33,7 @@ const taskSchema = new Schema<ITask>(
       default: "TODO",
     },
     dueDate: { type: Date, required: true },
+    completedAt: { type: Date },
   },
   { timestamps: true, toJSON: { virtuals: true } }
 );

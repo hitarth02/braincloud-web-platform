@@ -12,6 +12,9 @@ import taskRoutes from "./routes/taskRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
 import profileRoutes from "./routes/profileRoutes";
 import announcementRoutes from "./routes/announcementRoutes";
+import progressRoutes from "./routes/progressRoutes";
+import activityLogRoutes from "./routes/activityLogRoutes";
+import reportRoutes from "./routes/reportRoutes";
 
 const app = express();
 
@@ -33,6 +36,9 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/profile", profileRoutes);
 app.use("/api/announcements", announcementRoutes);
+app.use("/api/progress", progressRoutes);
+app.use("/api/activity-logs", activityLogRoutes);
+app.use("/api/reports", reportRoutes);
 
 app.use(notFoundHandler);
 app.use(errorHandler);

@@ -2,11 +2,17 @@ import { Response } from "express";
 import { User, UserRole } from "../models/User";
 import { Task } from "../models/Task";
 import { Announcement } from "../models/Announcement";
+import { TaskProgress } from "../models/TaskProgress";
 import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/apiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth";
 import { MAX_USERS, MAX_STAFF } from "../config/limits";
+import { logActivity } from "../utils/activityLogger";
+import { ActivityAction } from "../models/ActivityLog";
+
+const roleLabel = (targetRole: UserRole) =>
+  targetRole === "STAFF" ? "staff member" : "user";
 
 /**
  * Users and Staff are both stored in the same User collection, differentiated
@@ -81,7 +87,14 @@ export const makeUserController = (targetRole: UserRole) => {
       phone,
       role: targetRole,
       mustChangePassword: true,
+      createdBy: req.user!.userId,
     });
+
+    logActivity(
+      req.user!,
+      `${targetRole}_CREATED` as ActivityAction,
+      `Created ${roleLabel(targetRole)} ${user.firstName} ${user.lastName}`
+    );
 
     sendSuccess(res, "Created successfully", user, 201);
   });
@@ -97,6 +110,13 @@ export const makeUserController = (targetRole: UserRole) => {
     if (isActive !== undefined) user.isActive = isActive;
 
     await user.save();
+
+    logActivity(
+      req.user!,
+      `${targetRole}_UPDATED` as ActivityAction,
+      `Updated ${roleLabel(targetRole)} ${user.firstName} ${user.lastName}`
+    );
+
     sendSuccess(res, "Updated successfully", user);
   });
 
@@ -104,12 +124,32 @@ export const makeUserController = (targetRole: UserRole) => {
     const user = await User.findOne({ _id: req.params.id, role: targetRole });
     if (!user) throw new ApiError(404, "Not found");
 
-    // Cascade: a user's tasks/announcements have no meaning once the user is gone.
-    await Promise.all([
-      Task.deleteMany({ $or: [{ assignedTo: user._id }, { createdBy: user._id }] }),
-      Announcement.deleteMany({ createdBy: user._id }),
-    ]);
+    // Cascade: a user's tasks/announcements/progress notes have no meaning
+    // once the user is gone. Progress notes are deleted first, keyed off
+    // both the affected tasks (so notes authored by a *different* user on a
+    // task this user created are also cleaned up) and this user's own
+    // authored notes, before the tasks themselves are removed.
+    const affectedTasks = await Task.find({
+      $or: [{ assignedTo: user._id }, { createdBy: user._id }],
+    }).select("_id");
+    const affectedTaskIds = affectedTasks.map((t) => t._id);
+
+    await TaskProgress.deleteMany({
+      $or: [{ task: { $in: affectedTaskIds } }, { user: user._id }],
+    });
+    const [{ deletedCount: taskCount }, { deletedCount: announcementCount }] =
+      await Promise.all([
+        Task.deleteMany({ _id: { $in: affectedTaskIds } }),
+        Announcement.deleteMany({ createdBy: user._id }),
+      ]);
     await user.deleteOne();
+
+    logActivity(
+      req.user!,
+      `${targetRole}_DELETED` as ActivityAction,
+      `Deleted ${roleLabel(targetRole)} ${user.firstName} ${user.lastName} ` +
+        `(${taskCount} task(s), ${announcementCount} announcement(s) removed)`
+    );
 
     sendSuccess(res, "Deleted successfully", user);
   });
@@ -123,6 +163,12 @@ export const makeUserController = (targetRole: UserRole) => {
     user.password = req.body.newPassword;
     user.mustChangePassword = true;
     await user.save();
+
+    logActivity(
+      req.user!,
+      `${targetRole}_PASSWORD_RESET` as ActivityAction,
+      `Reset password for ${roleLabel(targetRole)} ${user.firstName} ${user.lastName}`
+    );
 
     sendSuccess(res, "Password reset successfully");
   });

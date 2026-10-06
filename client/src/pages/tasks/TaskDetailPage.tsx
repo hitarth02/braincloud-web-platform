@@ -1,14 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import toast from "react-hot-toast";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2, Send } from "lucide-react";
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
 import { Badge, priorityBadgeColor, statusBadgeColor } from "../../components/Badge";
 import { LoadingSpinner } from "../../components/LoadingSpinner";
+import { EmptyState } from "../../components/EmptyState";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
+import { ProgressNoteCard } from "../../components/ProgressNoteCard";
 import { taskService } from "../../services/taskService";
-import { Task, TaskStatus } from "../../types";
+import { progressService } from "../../services/progressService";
+import { useAuth } from "../../hooks/useAuth";
+import { Task, TaskProgressNote, TaskStatus } from "../../types";
 import { formatDate } from "../../utils/format";
 
 interface TaskDetailPageProps {
@@ -21,11 +25,17 @@ const STATUS_OPTIONS: TaskStatus[] = ["TODO", "IN_PROGRESS", "COMPLETED", "CANCE
 export const TaskDetailPage = ({ basePath, canManage }: TaskDetailPageProps) => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const [notes, setNotes] = useState<TaskProgressNote[]>([]);
+  const [notesLoading, setNotesLoading] = useState(true);
+  const [noteText, setNoteText] = useState("");
+  const [postingNote, setPostingNote] = useState(false);
 
   const load = () => {
     taskService
@@ -35,7 +45,36 @@ export const TaskDetailPage = ({ basePath, canManage }: TaskDetailPageProps) => 
       .finally(() => setLoading(false));
   };
 
+  const loadNotes = () => {
+    progressService
+      .listForTask(id!)
+      .then(setNotes)
+      .catch(() => {
+        /* USER viewing a task not their own gets a 403 — nothing to show */
+      })
+      .finally(() => setNotesLoading(false));
+  };
+
   useEffect(load, [id]);
+  useEffect(loadNotes, [id]);
+
+  const isOwner =
+    !!task && !!user && user.role === "USER" && task.assignedTo?.id === user.id;
+
+  const handleAddNote = async () => {
+    if (!task || !noteText.trim()) return;
+    setPostingNote(true);
+    try {
+      await progressService.addForTask(task._id, noteText.trim());
+      setNoteText("");
+      toast.success("Progress update posted");
+      loadNotes();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to post update");
+    } finally {
+      setPostingNote(false);
+    }
+  };
 
   const handleStatusChange = async (status: TaskStatus) => {
     if (!task) return;
@@ -143,6 +182,50 @@ export const TaskDetailPage = ({ basePath, canManage }: TaskDetailPageProps) => 
               </Button>
             )}
           </div>
+        </div>
+
+        <div className="border-t border-gray-100 pt-5">
+          <h2 className="text-sm font-medium text-gray-700 mb-3">Progress Updates</h2>
+
+          {isOwner && (
+            <div className="bg-gray-50 rounded-lg p-3 mb-4">
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value.slice(0, 1000))}
+                placeholder="What did you work on today?"
+                rows={2}
+                disabled={postingNote}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              />
+              <div className="flex items-center justify-between mt-2">
+                <span className="text-xs text-gray-400">{noteText.length}/1000</span>
+                <Button
+                  type="button"
+                  onClick={handleAddNote}
+                  disabled={postingNote || !noteText.trim()}
+                  loading={postingNote}
+                >
+                  <Send className="w-4 h-4" />
+                  Post Update
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {notesLoading ? (
+            <LoadingSpinner label="Loading progress updates..." />
+          ) : notes.length === 0 ? (
+            <EmptyState
+              title="No progress updates yet"
+              description="Updates posted by the assignee will show up here."
+            />
+          ) : (
+            <ul className="divide-y divide-gray-100 -mx-4">
+              {notes.map((n) => (
+                <ProgressNoteCard key={n._id} note={n} showTask={false} />
+              ))}
+            </ul>
+          )}
         </div>
       </Card>
 

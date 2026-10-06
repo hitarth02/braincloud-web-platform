@@ -7,6 +7,9 @@ import {
   UserCircle,
   LogOut,
   Megaphone,
+  History,
+  FileDown,
+  Activity,
 } from "lucide-react";
 import { UserRole } from "../types";
 
@@ -22,6 +25,9 @@ const navByRole: Record<UserRole, { to: string; label: string; icon: typeof Layo
     { to: "/admin/users", label: "Users", icon: Users },
     { to: "/admin/tasks", label: "Tasks", icon: ClipboardList },
     { to: "/admin/announcements", label: "Announcements", icon: Megaphone },
+    { to: "/admin/progress", label: "Team Progress", icon: Activity },
+    { to: "/admin/activity-log", label: "Activity Log", icon: History },
+    { to: "/admin/reports", label: "Reports", icon: FileDown },
     { to: "/admin/profile", label: "Profile", icon: UserCircle },
   ],
   STAFF: [
@@ -29,12 +35,15 @@ const navByRole: Record<UserRole, { to: string; label: string; icon: typeof Layo
     { to: "/staff/users", label: "Users", icon: Users },
     { to: "/staff/tasks", label: "Tasks", icon: ClipboardList },
     { to: "/staff/announcements", label: "Announcements", icon: Megaphone },
+    { to: "/staff/progress", label: "Team Progress", icon: Activity },
+    { to: "/staff/reports", label: "Reports", icon: FileDown },
     { to: "/staff/profile", label: "Profile", icon: UserCircle },
   ],
   USER: [
     { to: "/user/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/user/tasks", label: "My Tasks", icon: ClipboardList },
     { to: "/user/announcements", label: "Announcements", icon: Megaphone },
+    { to: "/user/reports", label: "Reports", icon: FileDown },
     { to: "/user/profile", label: "Profile", icon: UserCircle },
   ],
 };

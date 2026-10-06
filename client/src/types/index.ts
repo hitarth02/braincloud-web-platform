@@ -29,6 +29,19 @@ export interface Task {
   priority: TaskPriority;
   status: TaskStatus;
   dueDate: string;
+  completedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskProgressNote {
+  _id: string;
+  // Nullable: the referenced task/user can be deleted after the note is
+  // created (see userController.remove / taskController.deleteTask cascade),
+  // in which case populate() resolves the field to null.
+  task: { _id: string; title: string; status: TaskStatus; createdBy?: string } | null;
+  user: { _id: string; firstName: string; lastName: string } | null;
+  note: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -59,15 +72,41 @@ export interface PriorityBreakdown {
 }
 
 export type ActivityType =
-  | "user_created"
-  | "task_created"
-  | "task_completed"
-  | "announcement_created";
+  | "LOGIN"
+  | "LOGOUT"
+  | "USER_CREATED"
+  | "USER_UPDATED"
+  | "USER_DELETED"
+  | "USER_PASSWORD_RESET"
+  | "STAFF_CREATED"
+  | "STAFF_UPDATED"
+  | "STAFF_DELETED"
+  | "STAFF_PASSWORD_RESET"
+  | "TASK_CREATED"
+  | "TASK_UPDATED"
+  | "TASK_DELETED"
+  | "TASK_STATUS_CHANGED"
+  | "TASK_PROGRESS_ADDED"
+  | "ANNOUNCEMENT_CREATED"
+  | "ANNOUNCEMENT_UPDATED"
+  | "ANNOUNCEMENT_DELETED"
+  | "PASSWORD_CHANGED";
 
 export interface ActivityItem {
   type: ActivityType;
   message: string;
   timestamp: string;
+}
+
+// Raw log row as returned by GET /api/activity-logs (actor populated, or
+// null if that account has since been hard-deleted).
+export interface ActivityLogEntry {
+  _id: string;
+  actor: { firstName: string; lastName: string; role: UserRole } | null;
+  actorRole: UserRole;
+  action: ActivityType;
+  message: string;
+  createdAt: string;
 }
 
 export interface UpcomingTask {
@@ -100,6 +139,8 @@ export interface StaffDashboardStats {
   recentTasks: Task[];
   priorityBreakdown: PriorityBreakdown;
   upcomingDeadlines: UpcomingTask[];
+  recentProgress: TaskProgressNote[];
+  recentActivity: ActivityItem[];
 }
 
 export interface UserDashboardStats {

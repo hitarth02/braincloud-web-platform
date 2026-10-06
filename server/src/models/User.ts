@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from "mongoose";
+import mongoose, { Document, Schema, Types } from "mongoose";
 import bcrypt from "bcryptjs";
 
 export type UserRole = "ADMIN" | "STAFF" | "USER";
@@ -13,6 +13,9 @@ export interface IUser extends Document {
   avatar?: string;
   isActive: boolean;
   mustChangePassword: boolean;
+  // Who created this account (Admin or Staff). Optional: the seeded Admin
+  // account and any account created before this field existed has none.
+  createdBy?: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidate: string): Promise<boolean>;
@@ -39,6 +42,7 @@ const userSchema = new Schema<IUser>(
     avatar: { type: String, default: "" },
     isActive: { type: Boolean, default: true },
     mustChangePassword: { type: Boolean, default: false },
+    createdBy: { type: Schema.Types.ObjectId, ref: "User" },
   },
   {
     timestamps: true,

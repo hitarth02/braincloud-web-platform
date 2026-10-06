@@ -1,7 +1,8 @@
 import { Response } from "express";
 import { User } from "../models/User";
 import { Task } from "../models/Task";
-import { Announcement } from "../models/Announcement";
+import { ActivityLog, AUTH_ACTIONS, IActivityLog } from "../models/ActivityLog";
+import { TaskProgress } from "../models/TaskProgress";
 import { sendSuccess } from "../utils/apiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth";
@@ -30,47 +31,59 @@ const getUpcomingDeadlines = async (filter: Record<string, unknown>) => {
     .populate("assignedTo", "firstName lastName");
 };
 
-const getRecentActivity = async () => {
-  const [recentPeople, recentTasks, recentCompletedTasks, recentAnnouncements] =
-    await Promise.all([
-      User.find({ role: { $in: ["USER", "STAFF"] } })
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .select("firstName lastName role createdAt"),
-      Task.find({}).sort({ createdAt: -1 }).limit(5).select("title createdAt"),
-      Task.find({ status: "COMPLETED" })
-        .sort({ updatedAt: -1 })
-        .limit(5)
-        .select("title updatedAt"),
-      Announcement.find({}).sort({ createdAt: -1 }).limit(5).select("title createdAt"),
-    ]);
+const formatActivityLogs = (logs: IActivityLog[]) =>
+  logs.map((log) => {
+    const actor = log.actor as unknown as
+      | { firstName: string; lastName: string }
+      | null;
+    const actorLabel = actor
+      ? `${actor.firstName} ${actor.lastName}`
+      : `A deleted ${log.actorRole.toLowerCase()} account`;
 
-  const items = [
-    ...recentPeople.map((u) => ({
-      type: "user_created" as const,
-      message: `${u.firstName} ${u.lastName} joined as ${u.role === "STAFF" ? "staff" : "a user"}`,
-      timestamp: u.createdAt,
-    })),
-    ...recentTasks.map((t) => ({
-      type: "task_created" as const,
-      message: `Task "${t.title}" was created`,
-      timestamp: t.createdAt,
-    })),
-    ...recentCompletedTasks.map((t) => ({
-      type: "task_completed" as const,
-      message: `Task "${t.title}" was completed`,
-      timestamp: t.updatedAt,
-    })),
-    ...recentAnnouncements.map((a) => ({
-      type: "announcement_created" as const,
-      message: `Announcement "${a.title}" was posted`,
-      timestamp: a.createdAt,
-    })),
+    return {
+      type: log.action,
+      message: `${actorLabel} ${log.message.charAt(0).toLowerCase()}${log.message.slice(1)}`,
+      timestamp: log.createdAt,
+    };
+  });
+
+// Reads from the persisted ActivityLog rather than reconstructing activity
+// from current collection state — that live-synthesis approach couldn't show
+// deletions (a deleted task just vanishes) or logins. See ActivityLog model.
+const getRecentActivity = async () => {
+  const logs = await ActivityLog.find({})
+    .populate("actor", "firstName lastName role")
+    .sort({ createdAt: -1 })
+    .limit(8);
+
+  return formatActivityLogs(logs);
+};
+
+// A Staff member's activity feed is scoped to their own actions plus actions
+// by Users they are connected to — Users they personally created, or Users
+// who have been assigned a task this Staff member created. Login/logout
+// noise is excluded (that's what the Admin-only Activity Log page is for).
+const getStaffRecentActivity = async (staffId: string) => {
+  const [createdUserIds, assignedUserIds] = await Promise.all([
+    User.find({ createdBy: staffId }).distinct("_id"),
+    Task.find({ createdBy: staffId }).distinct("assignedTo"),
+  ]);
+
+  const scopedActorIds = [
+    staffId,
+    ...createdUserIds.map((id) => String(id)),
+    ...assignedUserIds.map((id) => String(id)),
   ];
 
-  return items
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-    .slice(0, 8);
+  const logs = await ActivityLog.find({
+    actor: { $in: scopedActorIds },
+    action: { $nin: AUTH_ACTIONS },
+  })
+    .populate("actor", "firstName lastName role")
+    .sort({ createdAt: -1 })
+    .limit(8);
+
+  return formatActivityLogs(logs);
 };
 
 export const getAdminDashboard = asyncHandler(
@@ -127,6 +140,8 @@ export const getStaffDashboard = asyncHandler(
       recentTasks,
       priorityBreakdown,
       upcomingDeadlines,
+      recentProgress,
+      recentActivity,
     ] = await Promise.all([
       User.countDocuments({ role: "USER" }),
       Task.countDocuments({ createdBy: staffId }),
@@ -139,6 +154,15 @@ export const getStaffDashboard = asyncHandler(
         .populate("assignedTo", "firstName lastName email"),
       getPriorityBreakdown({ createdBy: staffId }),
       getUpcomingDeadlines({ createdBy: staffId }),
+      // Every User's daily progress notes, newest first — Staff has no
+      // ownership restriction, so this spans all Users, not just this
+      // Staff member's own tasks.
+      TaskProgress.find({})
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .populate("user", "firstName lastName")
+        .populate("task", "title createdBy"),
+      getStaffRecentActivity(staffId),
     ]);
 
     sendSuccess(res, "Dashboard fetched successfully", {
@@ -150,6 +174,8 @@ export const getStaffDashboard = asyncHandler(
       recentTasks,
       priorityBreakdown,
       upcomingDeadlines,
+      recentProgress,
+      recentActivity,
     });
   }
 );

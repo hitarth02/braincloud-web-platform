@@ -4,6 +4,7 @@ import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/apiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth";
+import { logActivity } from "../utils/activityLogger";
 
 export const getProfile = asyncHandler(async (req: AuthRequest, res: Response) => {
   const user = await User.findById(req.user!.userId);
@@ -40,6 +41,8 @@ export const changeOwnPassword = asyncHandler(
     user.password = newPassword;
     user.mustChangePassword = false;
     await user.save();
+
+    logActivity(req.user!, "PASSWORD_CHANGED", "Changed their own password");
 
     sendSuccess(res, "Password changed successfully");
   }

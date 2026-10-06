@@ -1,0 +1,38 @@
+import {
+  UserPlus,
+  UserCog,
+  UserMinus,
+  ClipboardList,
+  Pencil,
+  Trash2,
+  CheckCircle2,
+  MessageSquare,
+  Megaphone,
+  KeyRound,
+  LogIn,
+  LogOut,
+  LucideIcon,
+} from "lucide-react";
+import { ActivityType } from "../types";
+
+export const ACTIVITY_ICONS: Record<ActivityType, { icon: LucideIcon; color: string }> = {
+  LOGIN: { icon: LogIn, color: "bg-blue-50 text-blue-600" },
+  LOGOUT: { icon: LogOut, color: "bg-gray-50 text-gray-600" },
+  USER_CREATED: { icon: UserPlus, color: "bg-blue-50 text-blue-600" },
+  USER_UPDATED: { icon: UserCog, color: "bg-blue-50 text-blue-600" },
+  USER_DELETED: { icon: UserMinus, color: "bg-red-50 text-red-600" },
+  USER_PASSWORD_RESET: { icon: KeyRound, color: "bg-amber-50 text-amber-600" },
+  STAFF_CREATED: { icon: UserPlus, color: "bg-indigo-50 text-indigo-600" },
+  STAFF_UPDATED: { icon: UserCog, color: "bg-indigo-50 text-indigo-600" },
+  STAFF_DELETED: { icon: UserMinus, color: "bg-red-50 text-red-600" },
+  STAFF_PASSWORD_RESET: { icon: KeyRound, color: "bg-amber-50 text-amber-600" },
+  TASK_CREATED: { icon: ClipboardList, color: "bg-gray-50 text-gray-600" },
+  TASK_UPDATED: { icon: Pencil, color: "bg-gray-50 text-gray-600" },
+  TASK_DELETED: { icon: Trash2, color: "bg-red-50 text-red-600" },
+  TASK_STATUS_CHANGED: { icon: CheckCircle2, color: "bg-green-50 text-green-600" },
+  TASK_PROGRESS_ADDED: { icon: MessageSquare, color: "bg-teal-50 text-teal-600" },
+  ANNOUNCEMENT_CREATED: { icon: Megaphone, color: "bg-purple-50 text-purple-600" },
+  ANNOUNCEMENT_UPDATED: { icon: Megaphone, color: "bg-purple-50 text-purple-600" },
+  ANNOUNCEMENT_DELETED: { icon: Trash2, color: "bg-red-50 text-red-600" },
+  PASSWORD_CHANGED: { icon: KeyRound, color: "bg-amber-50 text-amber-600" },
+};

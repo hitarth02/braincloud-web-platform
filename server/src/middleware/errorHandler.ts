@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
 import { ZodError } from "zod";
 import { ApiError } from "../utils/ApiError";
 
@@ -21,6 +22,16 @@ export const errorHandler = (
       success: false,
       message: err.message,
       ...(err.code ? { code: err.code } : {}),
+    });
+  }
+
+  // A malformed MongoDB ObjectId in a route param (e.g. a hand-edited URL or
+  // stale bookmark) throws this instead of just not matching anything — map
+  // it to a clean 400 rather than letting it fall through to a raw 500.
+  if (err instanceof mongoose.Error.CastError) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid ID format",
     });
   }
 

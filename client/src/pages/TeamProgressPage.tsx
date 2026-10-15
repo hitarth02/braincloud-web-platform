@@ -36,7 +36,9 @@ export const TeamProgressPage = ({ taskBasePath }: TeamProgressPageProps) => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Team Progress Updates</h1>
         <p className="text-sm text-gray-500 mt-1">
-          Daily progress notes posted by every user, newest first.
+          {user?.role === "ADMIN"
+            ? "Daily progress notes posted by every user, newest first."
+            : "Daily progress notes from users you created, newest first."}
         </p>
       </div>
 

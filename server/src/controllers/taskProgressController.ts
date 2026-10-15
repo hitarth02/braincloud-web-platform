@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { Task } from "../models/Task";
 import { TaskProgress } from "../models/TaskProgress";
+import { User } from "../models/User";
 import { ApiError } from "../utils/ApiError";
 import { sendSuccess } from "../utils/apiResponse";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -9,8 +10,8 @@ import { logActivity } from "../utils/activityLogger";
 
 // Mirrors taskController's assertCanAccessTask: a USER may only view
 // progress on their own tasks, a STAFF member only on tasks they created
-// (the per-task thread follows the task's own visibility — the separate
-// /api/progress/team feed is intentionally broader, see getTeamProgressFeed).
+// (the per-task thread follows the task's own visibility — see
+// getTeamProgressFeed for the equivalent scoping on the team-wide feed).
 const assertCanViewTaskProgress = (
   task: { assignedTo: { toString(): string }; createdBy: { toString(): string } },
   req: AuthRequest
@@ -73,6 +74,7 @@ export const getMyProgressFeed = asyncHandler(
 
     const total = await TaskProgress.countDocuments(filter);
     const items = await TaskProgress.find(filter)
+      .populate("user", "firstName lastName")
       .populate("task", "title status")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -95,8 +97,18 @@ export const getTeamProgressFeed = asyncHandler(
     const page = parseInt((req.query.page as string) || "1", 10);
     const limit = parseInt((req.query.limit as string) || "10", 10);
 
-    const total = await TaskProgress.countDocuments({});
-    const items = await TaskProgress.find({})
+    // ADMIN sees every User's progress; STAFF only sees progress from Users
+    // they personally created — no system-wide visibility for Staff.
+    let filter: Record<string, unknown> = {};
+    if (req.user!.role === "STAFF") {
+      const createdUserIds = await User.find({
+        createdBy: req.user!.userId,
+      }).distinct("_id");
+      filter = { user: { $in: createdUserIds } };
+    }
+
+    const total = await TaskProgress.countDocuments(filter);
+    const items = await TaskProgress.find(filter)
       .populate("user", "firstName lastName")
       .populate("task", "title status createdBy")
       .sort({ createdAt: -1 })

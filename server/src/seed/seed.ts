@@ -42,15 +42,26 @@ const seed = async () => {
     role: "ADMIN",
   });
 
+  const staffDocs = [];
   for (const staff of staffData) {
-    await User.create({ ...staff, password: DEV_PASSWORD, role: "STAFF" });
+    staffDocs.push(await User.create({ ...staff, password: DEV_PASSWORD, role: "STAFF" }));
   }
 
-  for (const user of userData) {
-    await User.create({ ...user, password: DEV_PASSWORD, role: "USER" });
+  // Each demo User is created by a different demo Staff member, so the
+  // Staff-scoped visibility rules (a Staff member only sees/assigns Users
+  // they created) have something real to demonstrate out of the box.
+  for (let i = 0; i < userData.length; i++) {
+    const creator = staffDocs[i % staffDocs.length];
+    await User.create({
+      ...userData[i],
+      password: DEV_PASSWORD,
+      role: "USER",
+      createdBy: creator._id,
+    });
   }
 
   console.log("Seed complete: 1 admin, 2 staff, 2 users created.");
+  console.log("Emma Brown -> created by Sarah Miller; Liam Davis -> created by James Wilson.");
   console.log(`Development password for all accounts: ${DEV_PASSWORD}`);
 
   await mongoose.disconnect();

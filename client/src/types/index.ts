@@ -11,6 +11,10 @@ export interface User {
   avatar?: string;
   isActive: boolean;
   mustChangePassword: boolean;
+  // Who created this account (Admin or Staff). Populated with name fields
+  // when available; null/undefined for accounts with no recorded creator
+  // (seeded accounts, or pre-dating this field).
+  createdBy?: { id?: string; _id?: string; firstName: string; lastName: string } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,6 +82,7 @@ export type ActivityType =
   | "USER_UPDATED"
   | "USER_DELETED"
   | "USER_PASSWORD_RESET"
+  | "USER_REASSIGNED"
   | "STAFF_CREATED"
   | "STAFF_UPDATED"
   | "STAFF_DELETED"

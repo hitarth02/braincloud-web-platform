@@ -76,6 +76,7 @@ function App() {
                     title="Users"
                     description="Manage user accounts across the organization."
                     entityLabel="User"
+                    canReassign
                   />
                 }
               />

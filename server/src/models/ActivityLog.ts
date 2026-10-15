@@ -8,6 +8,7 @@ export type ActivityAction =
   | "USER_UPDATED"
   | "USER_DELETED"
   | "USER_PASSWORD_RESET"
+  | "USER_REASSIGNED"
   | "STAFF_CREATED"
   | "STAFF_UPDATED"
   | "STAFF_DELETED"

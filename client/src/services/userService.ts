@@ -51,6 +51,14 @@ export const createUserService = (basePath: "/users" | "/staff") => ({
     );
     return res.data;
   },
+  // Admin-only; only meaningful on /api/users (hands a User off to a
+  // different Staff member).
+  reassignOwner: async (id: string, newOwnerId: string) => {
+    const res = await api.put<ApiResponse<User>>(`${basePath}/${id}/reassign`, {
+      newOwnerId,
+    });
+    return res.data.data;
+  },
 });
 
 export const userService = createUserService("/users");

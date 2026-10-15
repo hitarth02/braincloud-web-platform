@@ -20,14 +20,16 @@ const onTimeLabel = (status: TaskStatus, dueDate: Date, completedAt?: Date) => {
 /**
  * Resolves which (role, targetId) this caller is actually allowed to export:
  * - USER  -> only their own report, regardless of what's requested.
- * - STAFF -> any USER's report, or only their own STAFF report.
+ * - STAFF -> a USER report only for a User they created, or their own STAFF
+ *   report — no system-wide visibility for Staff, matching every other
+ *   Staff-scoped endpoint (users, task assignment, progress feeds).
  * - ADMIN -> any USER or STAFF report.
  */
-const resolveScope = (
+const resolveScope = async (
   req: AuthRequest,
   requestedRole: string,
   requestedTargetId: string
-): { role: UserRole; targetId: string } => {
+): Promise<{ role: UserRole; targetId: string }> => {
   const callerRole = req.user!.role;
   const callerId = req.user!.userId;
 
@@ -43,8 +45,19 @@ const resolveScope = (
   }
 
   if (callerRole === "STAFF") {
-    if (requestedRole === "STAFF" && requestedTargetId !== callerId) {
-      throw new ApiError(403, "Staff may only export their own staff report");
+    if (requestedRole === "STAFF") {
+      if (requestedTargetId !== callerId) {
+        throw new ApiError(403, "Staff may only export their own staff report");
+      }
+    } else {
+      const owned = await User.findOne({
+        _id: requestedTargetId,
+        role: "USER",
+        createdBy: callerId,
+      });
+      if (!owned) {
+        throw new ApiError(403, "Staff may only export reports for users they created");
+      }
     }
     return { role: requestedRole, targetId: requestedTargetId };
   }
@@ -57,7 +70,7 @@ export const exportReport = asyncHandler(
   async (req: AuthRequest, res: Response) => {
     const requestedRole = (req.query.role as string) || "USER";
     const requestedTargetId = (req.query.targetId as string) || "";
-    const { role, targetId } = resolveScope(req, requestedRole, requestedTargetId);
+    const { role, targetId } = await resolveScope(req, requestedRole, requestedTargetId);
 
     const now = new Date();
     const to = req.query.to ? new Date(req.query.to as string) : now;

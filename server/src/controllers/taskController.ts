@@ -8,12 +8,22 @@ import { asyncHandler } from "../utils/asyncHandler";
 import { AuthRequest } from "../middleware/auth";
 import { logActivity } from "../utils/activityLogger";
 
-// Tasks may only ever be assigned to plain USER accounts — never to
-// Staff or Admin — regardless of what the client sends.
-const assertAssignableUser = async (userId: string) => {
-  const assignee = await User.findOne({ _id: userId, role: "USER" });
+// Tasks may only ever be assigned to plain USER accounts — never to Staff
+// or Admin — regardless of what the client sends. A STAFF member may only
+// assign to a User they personally created (no system-wide visibility —
+// only ADMIN may assign to any User).
+const assertAssignableUser = async (userId: string, req: AuthRequest) => {
+  const filter: Record<string, unknown> = { _id: userId, role: "USER" };
+  if (req.user!.role === "STAFF") filter.createdBy = req.user!.userId;
+
+  const assignee = await User.findOne(filter);
   if (!assignee) {
-    throw new ApiError(400, "Tasks can only be assigned to users");
+    throw new ApiError(
+      400,
+      req.user!.role === "STAFF"
+        ? "You can only assign tasks to users you created"
+        : "Tasks can only be assigned to users"
+    );
   }
 };
 
@@ -97,7 +107,7 @@ export const getTaskById = asyncHandler(async (req: AuthRequest, res: Response) 
 export const createTask = asyncHandler(async (req: AuthRequest, res: Response) => {
   const { title, description, assignedTo, priority, dueDate } = req.body;
 
-  await assertAssignableUser(assignedTo);
+  await assertAssignableUser(assignedTo, req);
 
   const task = await Task.create({
     title,
@@ -123,7 +133,7 @@ export const updateTask = asyncHandler(async (req: AuthRequest, res: Response) =
   if (title !== undefined) task.title = title;
   if (description !== undefined) task.description = description;
   if (assignedTo !== undefined) {
-    await assertAssignableUser(assignedTo);
+    await assertAssignableUser(assignedTo, req);
     task.assignedTo = assignedTo;
   }
   if (priority !== undefined) task.priority = priority;

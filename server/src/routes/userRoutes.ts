@@ -1,11 +1,12 @@
 import { Router } from "express";
-import { makeUserController } from "../controllers/userController";
+import { makeUserController, reassignUserOwner } from "../controllers/userController";
 import { authenticate, authorize, requirePasswordFresh } from "../middleware/auth";
 import { validate } from "../middleware/validate";
 import {
   createUserSchema,
   updateUserSchema,
   resetPasswordSchema,
+  reassignOwnerSchema,
 } from "../validators/userValidators";
 
 const router = Router();
@@ -22,6 +23,14 @@ router.post(
   "/:id/reset-password",
   validate(resetPasswordSchema),
   controller.resetPassword
+);
+
+// Admin-only: hand a User off to a different Staff member.
+router.put(
+  "/:id/reassign",
+  authorize("ADMIN"),
+  validate(reassignOwnerSchema),
+  reassignUserOwner
 );
 
 export default router;

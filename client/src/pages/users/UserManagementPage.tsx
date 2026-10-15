@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Plus, Search, KeyRound, Pencil, Trash2 } from "lucide-react";
+import { Plus, Search, KeyRound, Pencil, Trash2, ArrowRightLeft } from "lucide-react";
 import toast from "react-hot-toast";
 import { Card } from "../../components/Card";
 import { Button } from "../../components/Button";
@@ -11,7 +11,7 @@ import { Pagination } from "../../components/Pagination";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Modal } from "../../components/Modal";
 import { FormInput } from "../../components/FormInput";
-import { createUserService } from "../../services/userService";
+import { createUserService, staffService } from "../../services/userService";
 import { Pagination as PaginationType, User } from "../../types";
 import { formatDate, initials } from "../../utils/format";
 
@@ -21,6 +21,9 @@ interface UserManagementPageProps {
   title: string;
   description: string;
   entityLabel: string;
+  /** Admin-only: shows an "Owner" column and lets Admin hand a User off to
+   * a different Staff member. Only meaningful on the Admin Users page. */
+  canReassign?: boolean;
 }
 
 export const UserManagementPage = ({
@@ -29,6 +32,7 @@ export const UserManagementPage = ({
   title,
   description,
   entityLabel,
+  canReassign = false,
 }: UserManagementPageProps) => {
   const navigate = useNavigate();
   const [items, setItems] = useState<User[]>([]);
@@ -44,6 +48,11 @@ export const UserManagementPage = ({
   const [resetTarget, setResetTarget] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [resetting, setResetting] = useState(false);
+
+  const [reassignTarget, setReassignTarget] = useState<User | null>(null);
+  const [staffOptions, setStaffOptions] = useState<User[]>([]);
+  const [newOwnerId, setNewOwnerId] = useState("");
+  const [reassigning, setReassigning] = useState(false);
 
   const load = () => {
     setLoading(true);
@@ -100,6 +109,31 @@ export const UserManagementPage = ({
       toast.error(err?.response?.data?.message || "Failed to reset password");
     } finally {
       setResetting(false);
+    }
+  };
+
+  const openReassign = (user: User) => {
+    setReassignTarget(user);
+    setNewOwnerId("");
+    staffService
+      .getAll({ page: 1, limit: 100, status: "active" })
+      .then((data) => setStaffOptions(data.items))
+      .catch(() => toast.error("Failed to load staff members"));
+  };
+
+  const handleReassign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reassignTarget || !newOwnerId) return;
+    setReassigning(true);
+    try {
+      await service.reassignOwner(reassignTarget.id || reassignTarget._id!, newOwnerId);
+      toast.success(`${entityLabel} reassigned`);
+      setReassignTarget(null);
+      load();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || "Failed to reassign");
+    } finally {
+      setReassigning(false);
     }
   };
 
@@ -164,6 +198,7 @@ export const UserManagementPage = ({
                   <th className="px-6 py-3 font-medium">Email</th>
                   <th className="px-6 py-3 font-medium">Role</th>
                   <th className="px-6 py-3 font-medium">Status</th>
+                  {canReassign && <th className="px-6 py-3 font-medium">Owner</th>}
                   <th className="px-6 py-3 font-medium">Joined</th>
                   <th className="px-6 py-3 font-medium text-right">Actions</th>
                 </tr>
@@ -194,6 +229,13 @@ export const UserManagementPage = ({
                         color={user.isActive ? "green" : "red"}
                       />
                     </td>
+                    {canReassign && (
+                      <td className="px-6 py-3 text-gray-500">
+                        {user.createdBy
+                          ? `${user.createdBy.firstName} ${user.createdBy.lastName}`
+                          : <span className="italic text-gray-400">Unowned</span>}
+                      </td>
+                    )}
                     <td className="px-6 py-3 text-gray-500">{formatDate(user.createdAt)}</td>
                     <td className="px-6 py-3">
                       <div className="flex justify-end gap-1">
@@ -211,6 +253,15 @@ export const UserManagementPage = ({
                         >
                           <KeyRound className="w-4 h-4" />
                         </button>
+                        {canReassign && (
+                          <button
+                            onClick={() => openReassign(user)}
+                            className="p-1.5 rounded-md text-gray-500 hover:bg-gray-100"
+                            title="Reassign owner"
+                          >
+                            <ArrowRightLeft className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => setDeleteTarget(user)}
                           className="p-1.5 rounded-md text-red-500 hover:bg-red-50"
@@ -263,6 +314,51 @@ export const UserManagementPage = ({
           </div>
         </form>
       </Modal>
+
+      {canReassign && (
+        <Modal
+          isOpen={!!reassignTarget}
+          onClose={() => setReassignTarget(null)}
+          title={`Reassign Owner — ${reassignTarget?.firstName} ${reassignTarget?.lastName}`}
+        >
+          <form onSubmit={handleReassign} className="space-y-4">
+            <p className="text-sm text-gray-500">
+              Currently owned by{" "}
+              <span className="font-medium text-gray-700">
+                {reassignTarget?.createdBy
+                  ? `${reassignTarget.createdBy.firstName} ${reassignTarget.createdBy.lastName}`
+                  : "no one"}
+              </span>
+              . Choose a new Staff owner below.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                New Owner
+              </label>
+              <select
+                value={newOwnerId}
+                onChange={(e) => setNewOwnerId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="">Select a staff member</option>
+                {staffOptions.map((staff) => (
+                  <option key={staff.id || staff._id} value={staff.id || staff._id}>
+                    {staff.firstName} {staff.lastName} ({staff.email})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button type="button" variant="secondary" onClick={() => setReassignTarget(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" loading={reassigning} disabled={!newOwnerId}>
+                Reassign
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 };

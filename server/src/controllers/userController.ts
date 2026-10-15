@@ -15,6 +15,17 @@ const roleLabel = (targetRole: UserRole) =>
   targetRole === "STAFF" ? "staff member" : "user";
 
 /**
+ * A Staff member only sees/manages Users they personally created — no
+ * system-wide visibility for Staff, only ADMIN sees every account. A User
+ * created directly by an Admin (or with no recorded creator, e.g. seeded
+ * accounts) is visible to Admin only, not to any Staff member. This only
+ * ever bites on /api/users (targetRole="USER") since /api/staff is already
+ * ADMIN-only at the route level.
+ */
+const ownerFilter = (req: AuthRequest): Record<string, unknown> =>
+  req.user!.role === "STAFF" ? { createdBy: req.user!.userId } : {};
+
+/**
  * Users and Staff are both stored in the same User collection, differentiated
  * by `role`. This factory produces a set of CRUD handlers scoped to a single
  * target role, so /api/users (role=USER) and /api/staff (role=STAFF) can
@@ -27,7 +38,7 @@ export const makeUserController = (targetRole: UserRole) => {
     const search = (req.query.search as string) || "";
     const status = (req.query.status as string) || "";
 
-    const filter: Record<string, unknown> = { role: targetRole };
+    const filter: Record<string, unknown> = { role: targetRole, ...ownerFilter(req) };
 
     if (search) {
       filter.$or = [
@@ -42,6 +53,7 @@ export const makeUserController = (targetRole: UserRole) => {
 
     const total = await User.countDocuments(filter);
     const users = await User.find(filter)
+      .populate("createdBy", "firstName lastName")
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(limit);
@@ -58,7 +70,11 @@ export const makeUserController = (targetRole: UserRole) => {
   });
 
   const getById = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const user = await User.findOne({ _id: req.params.id, role: targetRole });
+    const user = await User.findOne({
+      _id: req.params.id,
+      role: targetRole,
+      ...ownerFilter(req),
+    }).populate("createdBy", "firstName lastName");
     if (!user) throw new ApiError(404, "Not found");
     sendSuccess(res, "Fetched successfully", user);
   });
@@ -100,7 +116,11 @@ export const makeUserController = (targetRole: UserRole) => {
   });
 
   const update = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const user = await User.findOne({ _id: req.params.id, role: targetRole });
+    const user = await User.findOne({
+      _id: req.params.id,
+      role: targetRole,
+      ...ownerFilter(req),
+    });
     if (!user) throw new ApiError(404, "Not found");
 
     const { firstName, lastName, phone, isActive } = req.body;
@@ -121,7 +141,11 @@ export const makeUserController = (targetRole: UserRole) => {
   });
 
   const remove = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const user = await User.findOne({ _id: req.params.id, role: targetRole });
+    const user = await User.findOne({
+      _id: req.params.id,
+      role: targetRole,
+      ...ownerFilter(req),
+    });
     if (!user) throw new ApiError(404, "Not found");
 
     // Cascade: a user's tasks/announcements/progress notes have no meaning
@@ -155,9 +179,11 @@ export const makeUserController = (targetRole: UserRole) => {
   });
 
   const resetPassword = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const user = await User.findOne({ _id: req.params.id, role: targetRole }).select(
-      "+password"
-    );
+    const user = await User.findOne({
+      _id: req.params.id,
+      role: targetRole,
+      ...ownerFilter(req),
+    }).select("+password");
     if (!user) throw new ApiError(404, "Not found");
 
     user.password = req.body.newPassword;
@@ -175,3 +201,49 @@ export const makeUserController = (targetRole: UserRole) => {
 
   return { getAll, getById, create, update, remove, resetPassword };
 };
+
+/**
+ * Admin-only: transfers a User's ownership to a different Staff member,
+ * fixing the one gap the "Staff only sees Users they created" model leaves
+ * open — there was previously no way to hand a User off to another Staff
+ * member (e.g. when the original creator leaves). Only ever meaningful for
+ * USER-role accounts — Staff ownership isn't used for any scoping today.
+ */
+export const reassignUserOwner = asyncHandler(
+  async (req: AuthRequest, res: Response) => {
+    const { newOwnerId } = req.body;
+
+    const user = await User.findOne({ _id: req.params.id, role: "USER" });
+    if (!user) throw new ApiError(404, "Not found");
+
+    const newOwner = await User.findOne({
+      _id: newOwnerId,
+      role: "STAFF",
+      isActive: true,
+    });
+    if (!newOwner) {
+      throw new ApiError(400, "New owner must be an active staff member");
+    }
+
+    const previousOwner = user.createdBy
+      ? await User.findById(user.createdBy)
+      : null;
+
+    user.createdBy = newOwner.id;
+    await user.save();
+    await user.populate("createdBy", "firstName lastName");
+
+    logActivity(
+      req.user!,
+      "USER_REASSIGNED",
+      previousOwner
+        ? `Reassigned user ${user.firstName} ${user.lastName} from ` +
+          `${previousOwner.firstName} ${previousOwner.lastName} to ` +
+          `${newOwner.firstName} ${newOwner.lastName}`
+        : `Assigned previously unowned user ${user.firstName} ${user.lastName} ` +
+          `to ${newOwner.firstName} ${newOwner.lastName}`
+    );
+
+    sendSuccess(res, "User reassigned successfully", user);
+  }
+);

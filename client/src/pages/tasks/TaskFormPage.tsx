@@ -8,6 +8,7 @@ import { Button } from "../../components/Button";
 import { FormInput } from "../../components/FormInput";
 import { taskService } from "../../services/taskService";
 import { userService } from "../../services/userService";
+import { useAuth } from "../../hooks/useAuth";
 import { User, TaskPriority } from "../../types";
 
 interface TaskFormPageProps {
@@ -26,7 +27,9 @@ type FormErrors = Partial<Record<keyof typeof taskSchema.shape, string>>;
 
 export const TaskFormPage = ({ basePath }: TaskFormPageProps) => {
   const navigate = useNavigate();
+  const { user: viewer } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
+  const [usersLoaded, setUsersLoaded] = useState(false);
   const [form, setForm] = useState({
     title: "",
     description: "",
@@ -41,7 +44,8 @@ export const TaskFormPage = ({ basePath }: TaskFormPageProps) => {
     userService
       .getAll({ page: 1, limit: 100, status: "active" })
       .then((data) => setUsers(data.items))
-      .catch(() => toast.error("Failed to load users"));
+      .catch(() => toast.error("Failed to load users"))
+      .finally(() => setUsersLoaded(true));
   }, []);
 
   const handleSubmit = async (e: FormEvent) => {
@@ -127,6 +131,13 @@ export const TaskFormPage = ({ basePath }: TaskFormPageProps) => {
             </select>
             {errors.assignedTo && (
               <p className="text-xs text-red-500 mt-1">{errors.assignedTo}</p>
+            )}
+            {usersLoaded && users.length === 0 && (
+              <p className="text-xs text-gray-500 mt-1">
+                {viewer?.role === "STAFF"
+                  ? "No users available — you can only assign tasks to users you've created. Create a user first."
+                  : "No active users exist yet — create one first."}
+              </p>
             )}
           </div>
 

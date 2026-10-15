@@ -86,6 +86,19 @@ const getStaffRecentActivity = async (staffId: string) => {
   return formatActivityLogs(logs);
 };
 
+// A Staff member's dashboard progress feed only spans Users they personally
+// created — no system-wide visibility for Staff (matches getTeamProgressFeed
+// in taskProgressController, which powers the full "Team Progress" page).
+const getStaffRecentProgress = async (staffId: string) => {
+  const createdUserIds = await User.find({ createdBy: staffId }).distinct("_id");
+
+  return TaskProgress.find({ user: { $in: createdUserIds } })
+    .sort({ createdAt: -1 })
+    .limit(5)
+    .populate("user", "firstName lastName")
+    .populate("task", "title createdBy");
+};
+
 export const getAdminDashboard = asyncHandler(
   async (_req: AuthRequest, res: Response) => {
     const [
@@ -143,7 +156,7 @@ export const getStaffDashboard = asyncHandler(
       recentProgress,
       recentActivity,
     ] = await Promise.all([
-      User.countDocuments({ role: "USER" }),
+      User.countDocuments({ role: "USER", createdBy: staffId }),
       Task.countDocuments({ createdBy: staffId }),
       Task.countDocuments({ createdBy: staffId, status: "TODO" }),
       Task.countDocuments({ createdBy: staffId, status: "IN_PROGRESS" }),
@@ -154,14 +167,7 @@ export const getStaffDashboard = asyncHandler(
         .populate("assignedTo", "firstName lastName email"),
       getPriorityBreakdown({ createdBy: staffId }),
       getUpcomingDeadlines({ createdBy: staffId }),
-      // Every User's daily progress notes, newest first — Staff has no
-      // ownership restriction, so this spans all Users, not just this
-      // Staff member's own tasks.
-      TaskProgress.find({})
-        .sort({ createdAt: -1 })
-        .limit(5)
-        .populate("user", "firstName lastName")
-        .populate("task", "title createdBy"),
+      getStaffRecentProgress(staffId),
       getStaffRecentActivity(staffId),
     ]);
 

@@ -25,3 +25,9 @@ export const resetPasswordSchema = z.object({
     newPassword: z.string().min(6, "Password must be at least 6 characters"),
   }),
 });
+
+export const reassignOwnerSchema = z.object({
+  body: z.object({
+    newOwnerId: z.string().min(1, "New owner is required"),
+  }),
+});
